@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/olegromanchuk/secsipidx/certprovider"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,81 +21,83 @@ const secsipidxVersion = "1.2.0"
 
 // CLIOptions - structure for command line options
 type CLIOptions struct {
-	httpsrv     string
-	httpssrv    string
-	httpspubkey string
-	httpsprvkey string
-	httpdir     string
-	fprvkey     string
-	fpubkey     string
-	header      string
-	fheader     string
-	payload     string
-	fpayload    string
-	identity    string
-	fidentity   string
-	alg         string
-	ppt         string
-	typ         string
-	x5u         string
-	attest      string
-	desttn      string
-	origtn      string
-	iat         int
-	origid      string
-	check       bool
-	sign        bool
-	signfull    bool
-	jsonparse   bool
-	expire      int
-	timeout     int
-	ltest       bool
-	version     bool
-	cachedir    string
-	cacheexpire int
-	cafile      string
-	cainter     string
-	crlfile     string
-	certverify  int
+	httpsrv        string
+	httpssrv       string
+	httpspubkey    string
+	httpsprvkey    string
+	httpdir        string
+	fprvkey        string
+	fpubkey        string
+	header         string
+	fheader        string
+	payload        string
+	fpayload       string
+	identity       string
+	fidentity      string
+	alg            string
+	ppt            string
+	typ            string
+	x5u            string
+	attest         string
+	desttn         string
+	origtn         string
+	iat            int
+	origid         string
+	check          bool
+	sign           bool
+	signfull       bool
+	jsonparse      bool
+	expire         int
+	timeout        int
+	ltest          bool
+	version        bool
+	cachedir       string
+	cacheexpire    int
+	cafile         string
+	cainter        string
+	crlfile        string
+	certverify     int
+	getcertificate bool
 }
 
 var cliops = CLIOptions{
-	httpsrv:     "",
-	httpssrv:    "",
-	httpspubkey: "",
-	httpsprvkey: "",
-	httpdir:     "",
-	fprvkey:     "",
-	fpubkey:     "",
-	header:      "",
-	fheader:     "",
-	payload:     "",
-	fpayload:    "",
-	identity:    "",
-	fidentity:   "",
-	alg:         "ES256",
-	ppt:         "shaken",
-	typ:         "passport",
-	x5u:         "",
-	attest:      "C",
-	desttn:      "",
-	origtn:      "",
-	iat:         0,
-	origid:      "",
-	check:       false,
-	sign:        false,
-	signfull:    false,
-	jsonparse:   false,
-	expire:      0,
-	timeout:     3,
-	ltest:       false,
-	version:     false,
-	cachedir:    "",
-	cacheexpire: 3600,
-	cafile:      "",
-	cainter:     "",
-	crlfile:     "",
-	certverify:  0,
+	httpsrv:        "",
+	httpssrv:       "",
+	httpspubkey:    "",
+	httpsprvkey:    "",
+	httpdir:        "",
+	fprvkey:        "",
+	fpubkey:        "",
+	header:         "",
+	fheader:        "",
+	payload:        "",
+	fpayload:       "",
+	identity:       "",
+	fidentity:      "",
+	alg:            "ES256",
+	ppt:            "shaken",
+	typ:            "passport",
+	x5u:            "",
+	attest:         "C",
+	desttn:         "",
+	origtn:         "",
+	iat:            0,
+	origid:         "",
+	check:          false,
+	sign:           false,
+	signfull:       false,
+	jsonparse:      false,
+	expire:         0,
+	timeout:        3,
+	ltest:          false,
+	version:        false,
+	cachedir:       "",
+	cacheexpire:    3600,
+	cafile:         "",
+	cainter:        "",
+	crlfile:        "",
+	certverify:     0,
+	getcertificate: false,
 }
 
 // initialize application components
@@ -153,6 +156,8 @@ func init() {
 	flag.StringVar(&cliops.cainter, "ca-inter", cliops.cainter, "file with intermediate CA certificates in pem format")
 	flag.StringVar(&cliops.crlfile, "crl-file", cliops.crlfile, "file with CRL in pem format")
 	flag.IntVar(&cliops.certverify, "cert-verify", cliops.certverify, "certificate verification mode (default 0")
+	flag.BoolVar(&cliops.getcertificate, "getcertificate", cliops.getcertificate, "get certificate from STI-CA. Expect next environment values: CERTIFICATE_PROVIDER=TransNexus, CA_TOKEN=MyToken")
+
 }
 
 func localTest() {
@@ -483,6 +488,23 @@ func main() {
 		case err := <-errchan:
 			log.Printf("unable to start http services due to (error: %v)", err)
 		}
+		os.Exit(1)
+	}
+
+	if cliops.getcertificate {
+		//get certificate provider from env
+		certProviderValue := os.Getenv("CERTIFICATE_PROVIDER")
+		var certProvider certprovider.CertProvider
+
+		switch certProviderValue {
+		case "TransNexus":
+			certProvider.Provider = certprovider.TransNexus{}
+		default:
+			fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER")
+			os.Exit(1)
+		}
+
+		certProvider.Provider.PrintCertificateURL()
 		os.Exit(1)
 	}
 
