@@ -498,7 +498,11 @@ func main() {
 
 		switch certProviderValue {
 		case "TransNexus":
-			certProvider.Provider = certprovider.TransNexus{}
+			err := certProvider.IssueNewCertificate(certprovider.TransNexus{})
+			if err != nil {
+				log.Println(err)
+				os.Exit(1)
+			}
 		default:
 			fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER")
 			os.Exit(1)
