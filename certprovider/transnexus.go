@@ -1,19 +1,19 @@
 package certprovider
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
 var (
 	//ApiURL          string = "https://api.ca.transnexus.com/certificates/request"
-	ApiURL          string = "https://api.ca.transnexus.com/certificates/request"
+	ApiURL          string = "https://38155eda-a57e-430a-b8d1-9441e91180d3.mock.pstmn.io/certificates/request"
 	CertificateFile string = "myfile_w_certificate"
 )
 
@@ -43,64 +43,106 @@ type CertificateTransNexusResponseSuccess struct {
 		ServiceProviderCodeTokenId string `json:"serviceProviderCodeTokenId"`
 		SubjectKeyIdentifier       string `json:"subjectKeyIdentifier"`
 		ServiceProvider            string `json:"serviceProvider"`
-		NotBefore                  int    `json:"notBefore"`
-		NotAfter                   int    `json:"notAfter"`
+		NotBefore                  int64  `json:"notBefore"`
+		NotAfter                   int64  `json:"notAfter"`
 		Spid                       string `json:"spid"`
 		CertificateRepositoryUrl   string `json:"certificateRepositoryUrl"`
 		RootCertificate            string `json:"rootCertificate"`
 		IntermediateCertificate    string `json:"intermediateCertificate"`
 		ShakenCertificate          string `json:"shakenCertificate"`
 		Requestor                  string `json:"requestor"`
-		ValidityDays               int    `json:"validityDays"`
-		Price                      int    `json:"price"`
+		ValidityDays               int64  `json:"validityDays"`
+		Price                      int64  `json:"price"`
 	} `json:"certificate"`
 }
 
 type CertificateTransNexusResponseError struct {
 	Errors []struct {
-		Status int    `json:"status"`
-		Title  string `json:"title"`
-		Detail string `json:"detail"`
+		Status int    `json:"status,omitempty"`
+		Title  string `json:"title,omitempty"`
+		Detail string `json:"detail,omitempty"`
 	} `json:"errors"`
 }
 
-func (t TransNexus) IssueCertificate() error {
-	t.Token = os.Getenv("CA_TOKEN")
+//IssueCertificate fills TransNexus structure
+func (t *TransNexus) IssueCertificate() error {
+	//Last error number: 6007
+
+	t.Token = os.Getenv("CERTIFICATE_AUTHORITY_TOKEN")
 	if t.Token == "" {
-		errMsg := fmt.Errorf("Environment variable must be set: CA_TOKEN")
+		errMsg := fmt.Errorf("errorcode: 6001, errormsg: Environment variable must be set: CERTIFICATE_AUTHORITY_TOKEN")
 		return errMsg
 	}
 
-	client := http.Client{
+	clientHttp := http.Client{
 		Timeout: 3 * time.Second,
 	}
-	resp, err := client.Get(ApiURL)
 
+	postBody := CertificateTransNexusRequest{
+		Request: struct {
+			ValidityDays              int    `json:"validityDays"`
+			ServiceProviderCodeToken  string `json:"serviceProviderCodeToken"`
+			CertificateSigningRequest string `json:"certificateSigningRequest"`
+		}{
+			360,
+			"PROVIDERTOKEN",
+			"PEM_ENCODED_CERTIFICATE_SIGNING_REQUEST_HERE",
+		},
+	}
+
+	postBodyBytes, err := json.Marshal(postBody)
 	if err != nil {
-		errMsg := fmt.Errorf("cannot get certificate from:%v. Error: %v", ApiURL, err.Error())
+		errMsg := fmt.Errorf("errorcode: 6007, errordetails: %v", err.Error())
+		return errMsg
+	}
+	requestBody := bytes.NewBuffer(postBodyBytes)
+	req, err := http.NewRequest("POST", ApiURL, requestBody)
+
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", t.Token))
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := clientHttp.Do(req)
+	//Handle Error
+	if err != nil {
+		errMsg := fmt.Errorf("errorcode: 6002, errormsg: cannot get certificate from:%v, errordetails: %v", ApiURL, err.Error())
 		return errMsg
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		errMsg := fmt.Errorf("cannot read body from:%v. Error: %v", ApiURL, err.Error())
+		errMsg := fmt.Errorf("errorcode: 6003, errormsg: cannot read body from:%v, errordetails: %v", ApiURL, err.Error())
 		return errMsg
+	}
+
+	//check for non 200 response
+	if resp.StatusCode != 201 && resp.StatusCode != 302 {
+		var certError CertificateTransNexusResponseError
+		err = json.Unmarshal(body, &certError)
+		if err != nil {
+			errMsg := fmt.Errorf("errorcode: 6004, errormsg: cannot read error body from:%v, errordetails: %v", ApiURL, err.Error())
+			return errMsg
+		}
+		//process errors from Transnexus
+		var errMsg string
+		for i, e := range certError.Errors {
+			//add newline for second error
+			if i != 0 {
+				errMsg += "\n"
+			}
+			errMsg += fmt.Sprintf("errorcode: 6005, errormsg: got error from provider, URI: %v, token: %v, transnex.err.status: %v, transnex.err.title: %v, transnex.err.detail: %v", ApiURL, t.Token, e.Status, e.Title, e.Detail)
+		}
+		return fmt.Errorf(errMsg)
 	}
 
 	var cert CertificateTransNexusResponseSuccess
 	err = json.Unmarshal(body, &cert)
 	if err != nil {
-		//Cannot parse as successfull response. Checking for errors
+		//Cannot parse as a successfull response. Checking for errors
 		var certError CertificateTransNexusResponseError
-		err = json.Unmarshal(body, &cert)
-		if err != nil {
-			errMsg := fmt.Errorf("cannot read body from:%v. Error: %v", ApiURL, err.Error())
-			return errMsg
-		}
 		err = json.Unmarshal(body, &certError)
 		if err != nil {
-			errMsg := fmt.Errorf("cannot read error body from:%v. Error: %v", ApiURL, err.Error())
+			errMsg := fmt.Errorf("errorcode: 6006, errormsg: cannot read error body from:%v. Error: %v", ApiURL, err.Error())
 			return errMsg
 		}
 		for _, e := range certError.Errors {
@@ -121,12 +163,8 @@ func (t TransNexus) IssueCertificate() error {
 	return nil
 }
 
-func validateAndConvertAfterTimeFromEpoch(epochTime int) (notAfterTime time.Time, err error) {
-	notAfterTime, err = time.Parse(time.UnixDate, strconv.Itoa(epochTime))
-	if err != nil {
-		errDetailed := fmt.Errorf("cannot convert epoch to valid date. Epoch: %v Error: %v", epochTime, err.Error())
-		return notAfterTime, errDetailed
-	}
+func validateAndConvertAfterTimeFromEpoch(epochTime int64) (notAfterTime time.Time, err error) {
+	notAfterTime = time.Unix(epochTime, 0)
 
 	//check that the date is not in the past
 	if notAfterTime.Before(time.Now()) {
@@ -138,26 +176,26 @@ func validateAndConvertAfterTimeFromEpoch(epochTime int) (notAfterTime time.Time
 }
 
 //PrintCertificateURL prints CertificateURL
-func (t TransNexus) PrintCertificateURL() {
+func (t *TransNexus) PrintCertificateURL() {
 	fmt.Printf("%v\n", t.CertUrl)
 }
 
 //PrintCertificateURL returns CertificateURL
-func (t TransNexus) GetCertificateUrl() string {
+func (t *TransNexus) GetCertificateUrl() string {
 	return t.CertUrl
 }
 
 //PrintCertificateURL prints CertificateURL according to the layout
-func (t TransNexus) PrintExpirationTime(l string) {
+func (t *TransNexus) PrintExpirationTime(l string) {
 	fmt.Printf("%v\n", t.CertExpirationDate.Format(l))
 }
 
 //PrintCertificateURL returns ExpirationTime of the certificate
-func (t TransNexus) GetExpirationTime() time.Time {
+func (t *TransNexus) GetExpirationTime() time.Time {
 	return t.CertExpirationDate
 }
 
 //PrintCertificateFull prints all fields of the certificate
-func (t TransNexus) PrintCertificateRaw() {
+func (t *TransNexus) PrintCertificateRaw() {
 	fmt.Println(t.RawCertificate)
 }

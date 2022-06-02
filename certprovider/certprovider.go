@@ -1,6 +1,9 @@
 package certprovider
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type CertProviderInterface interface {
 	PrintCertificateURL()
@@ -17,7 +20,7 @@ type CertProvider struct {
 	ExpirationDate time.Time
 }
 
-func (c CertProvider) IssueNewCertificate(CertProviderInterface) error {
+func (c *CertProvider) IssueNewCertificate() error {
 	err := c.Provider.IssueCertificate()
 	if err != nil {
 		return err
@@ -25,4 +28,8 @@ func (c CertProvider) IssueNewCertificate(CertProviderInterface) error {
 	c.CertURL = c.Provider.GetCertificateUrl()
 	c.ExpirationDate = c.Provider.GetExpirationTime()
 	return nil
+}
+
+func (c *CertProvider) PrintCertificate() {
+	fmt.Printf("CertURL: %v\nExpirationDate:%v\n", c.CertURL, c.ExpirationDate)
 }

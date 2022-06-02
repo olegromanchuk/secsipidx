@@ -156,7 +156,7 @@ func init() {
 	flag.StringVar(&cliops.cainter, "ca-inter", cliops.cainter, "file with intermediate CA certificates in pem format")
 	flag.StringVar(&cliops.crlfile, "crl-file", cliops.crlfile, "file with CRL in pem format")
 	flag.IntVar(&cliops.certverify, "cert-verify", cliops.certverify, "certificate verification mode (default 0")
-	flag.BoolVar(&cliops.getcertificate, "getcertificate", cliops.getcertificate, "get certificate from STI-CA. Expect next environment values: CERTIFICATE_PROVIDER=TransNexus, CA_TOKEN=MyToken")
+	flag.BoolVar(&cliops.getcertificate, "getcertificate", cliops.getcertificate, "get certificate from STI-CA. Next env vars must be set: CERTIFICATE_PROVIDER=TransNexus, CERTIFICATE_AUTHORITY_TOKEN=MyToken")
 
 }
 
@@ -494,22 +494,27 @@ func main() {
 	if cliops.getcertificate {
 		//get certificate provider from env
 		certProviderValue := os.Getenv("CERTIFICATE_PROVIDER")
-		var certProvider certprovider.CertProvider
+		var certProvider *certprovider.CertProvider = &certprovider.CertProvider{}
 
 		switch certProviderValue {
 		case "TransNexus":
-			err := certProvider.IssueNewCertificate(certprovider.TransNexus{})
-			if err != nil {
-				log.Println(err)
-				os.Exit(1)
-			}
+			certProvider.Provider = &certprovider.TransNexus{}
 		default:
-			fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER")
+			if certProviderValue == "" {
+				fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER")
+			} else {
+				fmt.Printf("CERTIFICATE_PROVIDER=%v is not supported yet. Only supported values: TransNexus\n", certProviderValue)
+			}
 			os.Exit(1)
 		}
 
-		certProvider.Provider.PrintCertificateURL()
-		os.Exit(1)
+		err := certProvider.IssueNewCertificate()
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		certProvider.PrintCertificate()
+		os.Exit(0)
 	}
 
 	ret = 0
