@@ -13,7 +13,8 @@ import (
 
 var (
 	//ApiURL          string = "https://api.ca.transnexus.com/certificates/request"
-	ApiURL          string = "https://38155eda-a57e-430a-b8d1-9441e91180d3.mock.pstmn.io/certificates/request"
+	//ApiURL          string = "https://38155eda-a57e-430a-b8d1-9441e91180d3.mock.pstmn.io/certificates/request"
+	ApiURL          string = os.Getenv("CERTIFICATE_PROVIDER_URL")
 	CertificateFile string = "myfile_w_certificate"
 )
 
@@ -66,11 +67,16 @@ type CertificateTransNexusResponseError struct {
 
 //IssueCertificate fills TransNexus structure
 func (t *TransNexus) IssueCertificate() error {
-	//Last error number: 6007
+	//Last error number: 6008
 
 	t.Token = os.Getenv("CERTIFICATE_AUTHORITY_TOKEN")
 	if t.Token == "" {
 		errMsg := fmt.Errorf("errorcode: 6001, errormsg: Environment variable must be set: CERTIFICATE_AUTHORITY_TOKEN")
+		return errMsg
+	}
+
+	if ApiURL == "" {
+		errMsg := fmt.Errorf("errorcode: 6008, errormsg: Environment variable must be set: CERTIFICATE_PROVIDER_URL")
 		return errMsg
 	}
 
