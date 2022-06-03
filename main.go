@@ -501,7 +501,7 @@ func main() {
 			certProvider.Provider = &certprovider.TransNexus{}
 		default:
 			if certProviderValue == "" {
-				fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER")
+				fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER\n")
 			} else {
 				fmt.Printf("CERTIFICATE_PROVIDER=%v is not supported yet. Only supported values: TransNexus\n", certProviderValue)
 			}
