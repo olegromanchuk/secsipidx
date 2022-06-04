@@ -35,7 +35,7 @@ func (c *CertProvider) IssueNewCertificate() error {
 func (c *CertProvider) PrintCertificate(w io.Writer) {
 	type Struct4Printing struct {
 		CertURL        string `json:"certificate_url"`
-		ExpirationDate string `json:"certificate_expiration_time"`
+		ExpirationDate string `json:"certificate_expiration_date"`
 	}
 	s := Struct4Printing{
 		CertURL:        c.CertURL,
@@ -44,7 +44,7 @@ func (c *CertProvider) PrintCertificate(w io.Writer) {
 	data4Printing := map[string]Struct4Printing{"certificate": s}
 	json4Print, err := json.MarshalIndent(data4Printing, "", " ")
 	if err != nil {
-		fmt.Fprintf(w, "ERROR:%v", err.Error())
+		fmt.Fprintln(w, "ERROR:%v", err.Error())
 	}
-	fmt.Fprintf(w, string(json4Print))
+	fmt.Fprintln(w, string(json4Print))
 }
