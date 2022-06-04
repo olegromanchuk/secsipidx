@@ -513,7 +513,7 @@ func main() {
 			log.Println(err)
 			os.Exit(1)
 		}
-		certProvider.PrintCertificate()
+		certProvider.PrintCertificate(os.Stdout)
 		os.Exit(0)
 	}
 

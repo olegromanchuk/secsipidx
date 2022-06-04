@@ -1,7 +1,9 @@
 package certprovider
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -30,6 +32,19 @@ func (c *CertProvider) IssueNewCertificate() error {
 	return nil
 }
 
-func (c *CertProvider) PrintCertificate() {
-	fmt.Printf("CertURL: %v\nExpirationDate:%v\n", c.CertURL, c.ExpirationDate)
+func (c *CertProvider) PrintCertificate(w io.Writer) {
+	type Struct4Printing struct {
+		CertURL        string `json:"certificate_url"`
+		ExpirationDate string `json:"certificate_expiration_time"`
+	}
+	s := Struct4Printing{
+		CertURL:        c.CertURL,
+		ExpirationDate: c.ExpirationDate.Format("2006-01-02"),
+	}
+	data4Printing := map[string]Struct4Printing{"certificate": s}
+	json4Print, err := json.MarshalIndent(data4Printing, "", " ")
+	if err != nil {
+		fmt.Fprintf(w, "ERROR:%v", err.Error())
+	}
+	fmt.Fprintf(w, string(json4Print))
 }
