@@ -67,7 +67,7 @@ type CertificateTransNexusResponseError struct {
 
 //IssueCertificate fills TransNexus structure
 func (t *TransNexus) IssueCertificate() error {
-	//Last error number: 6008
+	//Last error number: 6009
 
 	t.Token = os.Getenv("CERTIFICATE_AUTHORITY_TOKEN")
 	if t.Token == "" {
@@ -84,6 +84,13 @@ func (t *TransNexus) IssueCertificate() error {
 		Timeout: 3 * time.Second,
 	}
 
+	//generate CSR
+	csrRequest, err := GenerateCSR()
+	if err != nil {
+		errMsg := fmt.Errorf("error:%v", err)
+		return errMsg
+	}
+
 	postBody := CertificateTransNexusRequest{
 		Request: struct {
 			ValidityDays              int    `json:"validityDays"`
@@ -92,7 +99,7 @@ func (t *TransNexus) IssueCertificate() error {
 		}{
 			360,
 			"PROVIDERTOKEN",
-			"PEM_ENCODED_CERTIFICATE_SIGNING_REQUEST_HERE",
+			csrRequest,
 		},
 	}
 

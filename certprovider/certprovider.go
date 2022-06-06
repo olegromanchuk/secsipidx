@@ -44,7 +44,7 @@ func (c *CertProvider) PrintCertificate(w io.Writer) {
 	data4Printing := map[string]Struct4Printing{"certificate": s}
 	json4Print, err := json.MarshalIndent(data4Printing, "", " ")
 	if err != nil {
-		fmt.Fprintln(w, "ERROR:%v", err.Error())
+		fmt.Fprintf(w, "ERROR:%v\n", err.Error())
 	}
 	fmt.Fprintln(w, string(json4Print))
 }

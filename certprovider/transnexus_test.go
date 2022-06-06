@@ -10,6 +10,17 @@ import (
 func TestTransNexus_IssueCertificate(t1 *testing.T) {
 	//set env for testing
 	os.Setenv("CERTIFICATE_PROVIDER_URL", "https://38155eda-a57e-430a-b8d1-9441e91180d3.mock.pstmn.io/certificates/request")
+
+	FullPathToPrivateKey = "/tmp/tmp_private_key.pem"
+	os.Setenv("EMAIL_4_CSR", "admin@examplecompany.com")
+	os.Setenv("DOMAIN_4_CSR", "examplecompany.com")
+	os.Setenv("COUNTRY_4_CSR", "US")
+	os.Setenv("PROVINCE_4_CSR", "NY")
+	os.Setenv("LOCALITY_4_CSR", "New-York")
+	os.Setenv("ORGANIZATION_4_CSR", "Example Company INC")
+	os.Setenv("ORGUNIT_4_CSR", "IT")
+	os.Setenv("PATH2PRIVATEKEY_4_CSR", FullPathToPrivateKey)
+
 	ApiURL = os.Getenv("CERTIFICATE_PROVIDER_URL")
 
 	type fields struct {
