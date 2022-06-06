@@ -25,21 +25,21 @@ var (
 	Locality4CSR         = os.Getenv("LOCALITY_4_CSR")
 	Organization4CSR     = os.Getenv("ORGANIZATION_4_CSR")
 	OrgUnit4CSR          = os.Getenv("ORGUNIT_4_CSR")
-	FullPathToPrivateKey = os.Getenv("PATH2PRIVATEKEY_4_CSR")
+	FullPathToPrivateKey = os.Getenv("PRIVATE_KEY_PATH_4_CSR")
 )
 
 func GenerateCSR() (pemEncodedCSR string, err error) {
 	//Last error number: 7011
 
-	oidEmailAddress = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
-	email4CSR = os.Getenv("EMAIL_4_CSR")
-	domain4CSR = os.Getenv("DOMAIN_4_CSR")
-	country4CSR = os.Getenv("COUNTRY_4_CSR")
-	Province4CSR = os.Getenv("PROVINCE_4_CSR")
-	Locality4CSR = os.Getenv("LOCALITY_4_CSR")
-	Organization4CSR = os.Getenv("ORGANIZATION_4_CSR")
-	OrgUnit4CSR = os.Getenv("ORGUNIT_4_CSR")
-	FullPathToPrivateKey = os.Getenv("PATH2PRIVATEKEY_4_CSR")
+	//oidEmailAddress = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
+	//email4CSR = os.Getenv("EMAIL_4_CSR")
+	//domain4CSR = os.Getenv("DOMAIN_4_CSR")
+	//country4CSR = os.Getenv("COUNTRY_4_CSR")
+	//Province4CSR = os.Getenv("PROVINCE_4_CSR")
+	//Locality4CSR = os.Getenv("LOCALITY_4_CSR")
+	//Organization4CSR = os.Getenv("ORGANIZATION_4_CSR")
+	//OrgUnit4CSR = os.Getenv("ORGUNIT_4_CSR")
+	//FullPathToPrivateKey = os.Getenv("PRIVATE_KEY_PATH_4_CSR")
 
 	//get private key from file
 	var privateKey *ecdsa.PrivateKey
