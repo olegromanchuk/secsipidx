@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/olegromanchuk/secsipidx/certprovider"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,83 +20,85 @@ const secsipidxVersion = "1.2.0"
 
 // CLIOptions - structure for command line options
 type CLIOptions struct {
-	httpsrv        string
-	httpssrv       string
-	httpspubkey    string
-	httpsprvkey    string
-	httpdir        string
-	fprvkey        string
-	fpubkey        string
-	header         string
-	fheader        string
-	payload        string
-	fpayload       string
-	identity       string
-	fidentity      string
-	alg            string
-	ppt            string
-	typ            string
-	x5u            string
-	attest         string
-	desttn         string
-	origtn         string
-	iat            int
-	origid         string
-	check          bool
-	sign           bool
-	signfull       bool
-	jsonparse      bool
-	expire         int
-	timeout        int
-	ltest          bool
-	version        bool
-	cachedir       string
-	cacheexpire    int
-	cafile         string
-	cainter        string
-	crlfile        string
-	certverify     int
-	getcertificate bool
+	httpsrv     string
+	httpssrv    string
+	httpspubkey string
+	httpsprvkey string
+	httpdir     string
+	fprvkey     string
+	fpubkey     string
+	header      string
+	fheader     string
+	payload     string
+	fpayload    string
+	identity    string
+	fidentity   string
+	alg         string
+	ppt         string
+	typ         string
+	x5u         string
+	attest      string
+	desttn      string
+	origtn      string
+	iat         int
+	origid      string
+	check       bool
+	sign        bool
+	signfull    bool
+	jsonparse   bool
+	expire      int
+	timeout     int
+	ltest       bool
+	version     bool
+	cachedir    string
+	cacheexpire int
+	cafile      string
+	cainter     string
+	crlfile     string
+	certverify  int
+	verbosity   int
+    	getcertificate bool
 }
 
 var cliops = CLIOptions{
-	httpsrv:        "",
-	httpssrv:       "",
-	httpspubkey:    "",
-	httpsprvkey:    "",
-	httpdir:        "",
-	fprvkey:        "",
-	fpubkey:        "",
-	header:         "",
-	fheader:        "",
-	payload:        "",
-	fpayload:       "",
-	identity:       "",
-	fidentity:      "",
-	alg:            "ES256",
-	ppt:            "shaken",
-	typ:            "passport",
-	x5u:            "",
-	attest:         "C",
-	desttn:         "",
-	origtn:         "",
-	iat:            0,
-	origid:         "",
-	check:          false,
-	sign:           false,
-	signfull:       false,
-	jsonparse:      false,
-	expire:         0,
-	timeout:        3,
-	ltest:          false,
-	version:        false,
-	cachedir:       "",
-	cacheexpire:    3600,
-	cafile:         "",
-	cainter:        "",
-	crlfile:        "",
-	certverify:     0,
-	getcertificate: false,
+	httpsrv:     "",
+	httpssrv:    "",
+	httpspubkey: "",
+	httpsprvkey: "",
+	httpdir:     "",
+	fprvkey:     "",
+	fpubkey:     "",
+	header:      "",
+	fheader:     "",
+	payload:     "",
+	fpayload:    "",
+	identity:    "",
+	fidentity:   "",
+	alg:         "ES256",
+	ppt:         "shaken",
+	typ:         "passport",
+	x5u:         "",
+	attest:      "C",
+	desttn:      "",
+	origtn:      "",
+	iat:         0,
+	origid:      "",
+	check:       false,
+	sign:        false,
+	signfull:    false,
+	jsonparse:   false,
+	expire:      0,
+	timeout:     3,
+	ltest:       false,
+	version:     false,
+	cachedir:    "",
+	cacheexpire: 3600,
+	cafile:      "",
+	cainter:     "",
+	crlfile:     "",
+	certverify:  0,
+	verbosity:   0,
+    	getcertificate: false,
 }
 
 // initialize application components
@@ -140,11 +141,11 @@ func init() {
 	flag.StringVar(&cliops.origid, "orig-id", cliops.origid, "origination identifier (default: '')")
 	flag.BoolVar(&cliops.check, "check", cliops.check, "check validity of the signature")
 	flag.BoolVar(&cliops.check, "c", cliops.check, "check validity of the signature")
-	flag.BoolVar(&cliops.sign, "sign", cliops.sign, "sign the header and payload")
-	flag.BoolVar(&cliops.sign, "s", cliops.sign, "sign the header and payload")
-	flag.BoolVar(&cliops.signfull, "sign-full", cliops.sign, "sign the header and payload, with parameters")
+	flag.BoolVar(&cliops.sign, "sign", cliops.sign, "sign the header and payload given as full JSON documents")
+	flag.BoolVar(&cliops.sign, "s", cliops.sign, "sign the header and payload given as full JSON documents")
+	flag.BoolVar(&cliops.signfull, "sign-full", cliops.sign, "sign the header and payload build from the individual parameter values")
 	flag.BoolVar(&cliops.signfull, "S", cliops.sign, "sign the header and payload, with parameters")
-	flag.BoolVar(&cliops.jsonparse, "json-parse", cliops.jsonparse, "parse and re-serialize JSON header and payaload values")
+	flag.BoolVar(&cliops.jsonparse, "json-parse", cliops.jsonparse, "parse and re-serialize JSON header and payload values")
 	flag.IntVar(&cliops.expire, "expire", cliops.expire, "duration of token validity (in seconds)")
 	flag.IntVar(&cliops.timeout, "timeout", cliops.timeout, "http get timeout (in seconds, default: 3)")
 	flag.BoolVar(&cliops.ltest, "ltest", cliops.ltest, "run local basic test")
@@ -155,8 +156,10 @@ func init() {
 	flag.StringVar(&cliops.cafile, "ca-file", cliops.cafile, "file with root CA certificates in pem format")
 	flag.StringVar(&cliops.cainter, "ca-inter", cliops.cainter, "file with intermediate CA certificates in pem format")
 	flag.StringVar(&cliops.crlfile, "crl-file", cliops.crlfile, "file with CRL in pem format")
-	flag.IntVar(&cliops.certverify, "cert-verify", cliops.certverify, "certificate verification mode (default 0")
-	flag.BoolVar(&cliops.getcertificate, "getcertificate", cliops.getcertificate, "get certificate from STI-CA. Next env vars must be set: CERTIFICATE_PROVIDER=TransNexus, CERTIFICATE_AUTHORITY_TOKEN=MyToken")
+	flag.IntVar(&cliops.certverify, "cert-verify", cliops.certverify, "certificate verification mode (default 0)")
+	flag.IntVar(&cliops.verbosity, "verbosity", cliops.verbosity, "verbosity level (default 0)")
+	flag.IntVar(&cliops.verbosity, "vl", cliops.verbosity, "verbosity level (default 0)")
+    	flag.BoolVar(&cliops.getcertificate, "getcertificate", cliops.getcertificate, "get certificate from STI-CA. Next env vars must be set: CERTIFICATE_PROVIDER=TransNexus, CERTIFICATE_AUTHORITY_TOKEN=MyToken")
 
 }
 
@@ -318,6 +321,9 @@ func secsipidxCLISign() int {
 	}
 
 	if useStruct {
+		if cliops.verbosity > 0 {
+			fmt.Printf("Signing using the structures build from parameter values\n")
+		}
 		prvkey, _ := ioutil.ReadFile(cliops.fprvkey)
 		var ecdsaPrvKey *ecdsa.PrivateKey
 
@@ -327,6 +333,9 @@ func secsipidxCLISign() int {
 		}
 		token = secsipid.SJWTEncode(header, payload, ecdsaPrvKey)
 	} else {
+		if cliops.verbosity > 0 {
+			fmt.Printf("Signing using the JSON documents from parameters\n")
+		}
 		token, _, _ = secsipid.SJWTEncodeText(sHeader, sPayload, cliops.fprvkey)
 	}
 	fmt.Printf("%s\n", token)
@@ -497,13 +506,15 @@ func main() {
 		var certProvider *certprovider.CertProvider = &certprovider.CertProvider{}
 
 		switch certProviderValue {
-		case "TransNexus":
+		case "transnexus":
 			certProvider.Provider = &certprovider.TransNexus{}
+		case "peeringhub":
+			certProvider.Provider = &certprovider.PeeringHub{}
 		default:
 			if certProviderValue == "" {
 				fmt.Printf("Environment variable must be set: CERTIFICATE_PROVIDER\n")
 			} else {
-				fmt.Printf("CERTIFICATE_PROVIDER=%v is not supported yet. Only supported values: TransNexus\n", certProviderValue)
+				fmt.Printf("CERTIFICATE_PROVIDER=%v is not supported yet. Only supported values: transnexus, peeringhub\n", certProviderValue)
 			}
 			os.Exit(1)
 		}
@@ -519,6 +530,9 @@ func main() {
 
 	ret = 0
 	if cliops.check {
+		if cliops.verbosity > 0 {
+			fmt.Printf("Running with check command\n")
+		}
 		ret = secsipidxCLICheck()
 		if ret == 0 {
 			fmt.Printf("ok\n")
@@ -527,9 +541,15 @@ func main() {
 		}
 		os.Exit(ret)
 	} else if cliops.signfull {
+		if cliops.verbosity > 0 {
+			fmt.Printf("Running with sign-full command\n")
+		}
 		ret = secsipidxCLISignFull()
 		os.Exit(ret)
 	} else if cliops.sign {
+		if cliops.verbosity > 0 {
+			fmt.Printf("Running with sign command\n")
+		}
 		ret = secsipidxCLISign()
 		os.Exit(ret)
 	} else {
