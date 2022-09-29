@@ -2,6 +2,7 @@ package certprovider
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 	"time"
 )
@@ -43,6 +44,35 @@ func TestCertProvider_PrintCertificate(t *testing.T) {
 			if gotW := w.String(); gotW != tt.wantW {
 				t.Errorf("PrintCertificate() = %v, want %v", gotW, tt.wantW)
 			}
+		})
+	}
+}
+
+func Test_checkError(t *testing.T) {
+
+	erro := errors.New("some error")
+	errDetails := "err details"
+
+	type args struct {
+		err          error
+		errorDetails string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			"nofile",
+			args{
+				erro,
+				errDetails,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkError(tt.args.err, tt.args.errorDetails)
 		})
 	}
 }
