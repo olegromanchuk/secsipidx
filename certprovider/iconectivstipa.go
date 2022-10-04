@@ -2,11 +2,15 @@ package certprovider
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,13 +27,6 @@ type CertProviderInterface interface {
 	PrintCertificateRaw()
 }
 */
-
-import (
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/pem"
-	"golang.org/x/crypto/ssh"
-)
 
 var (
 	//TODO update to production URL https://authenticate-api.iconectiv.com
@@ -112,6 +109,10 @@ func (stipa *Iconectiv) getSPCToken(scpcode string) (token string, err error) {
 	if err != nil {
 		return token, err
 	}
+	if requestResponse.Status == "error" {
+		fullErrMsg := fmt.Errorf("error during the request for SPC token. Details: %v", requestResponse.Message)
+		return token, fullErrMsg
+	}
 	return requestResponse.Token, nil
 }
 
@@ -152,8 +153,10 @@ func GenerateFingerprintFromString(pemString string) string {
 	pk, err := ssh.NewPublicKey(pubKey)
 	checkError(err, "")
 
-	sha256sum := sha256.Sum256(pk.Marshal())
-	return fmt.Sprintf("%s", colonedSerial(sha256sum))
+	pkMarshalled := pk.Marshal()
+	sha256sum := sha256.Sum256(pkMarshalled)
+	fingerPrintString := "SHA256 " + colonedSerial(sha256sum)
+	return fmt.Sprintf("%s", fingerPrintString)
 }
 
 func colonedSerial(in [32]byte) string {
@@ -161,7 +164,7 @@ func colonedSerial(in [32]byte) string {
 
 	for i := 0; i < len(in); i++ {
 		chunk += ":"
-		chunk += fmt.Sprintf("%x", in[i])
+		chunk += fmt.Sprintf("%02x", in[i])
 	}
 
 	chunk = chunk[1:]
@@ -210,7 +213,7 @@ func sendHttpRequest(urlBody []byte) (httpBody []byte, err error) {
 	// Build Request
 	accountIDSameAsOCNSPC := os.Getenv("STIPASPCode")
 	if accountIDSameAsOCNSPC == "" {
-		return nil, errors.New("")
+		return nil, errors.New("env variable STIPASPCode is empty")
 	}
 	method := "POST"
 	sendURL := fmt.Sprintf("%s/api/v1/account/%s/token/", ICONECTIV_API, accountIDSameAsOCNSPC)
